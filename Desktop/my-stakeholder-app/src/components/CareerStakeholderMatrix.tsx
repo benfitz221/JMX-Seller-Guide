@@ -20,6 +20,7 @@ import {
   BarChart3,
   Settings,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 import {
   ScatterChart,
@@ -35,6 +36,13 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import { useAuth } from "../lib/useAuth";
+import { 
+  createStakeholder, 
+  updateStakeholder, 
+  deleteStakeholder, 
+  subscribeToStakeholders 
+} from "../lib/stakeholders";
 
 interface Stakeholder {
   id: string;
@@ -75,6 +83,9 @@ interface Stakeholder {
   notes: string;
   location: string;
   connections: string[]; // IDs of connected stakeholders
+  userId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Metric definitions for UI/UX guidance
@@ -109,6 +120,7 @@ const metricDefinitions = {
 } as const;
 
 const CareerStakeholderMatrix: React.FC = () => {
+  const { user, loading } = useAuth();
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
   const [selectedStakeholder, setSelectedStakeholder] =
     useState<Stakeholder | null>(null);
@@ -126,6 +138,7 @@ const CareerStakeholderMatrix: React.FC = () => {
   const [matrixView, setMatrixView] = useState<
     "influence-support" | "influence-difficulty"
   >("influence-support");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Stakeholder type definitions for career planning
   const stakeholderTypeDefinitions = {
@@ -264,268 +277,16 @@ const CareerStakeholderMatrix: React.FC = () => {
     },
   };
 
-  // Sample data - Energy sector stakeholders relevant to Dr. Veda's career
+  // Load stakeholders from Firebase when user is authenticated
   useEffect(() => {
-    const sampleStakeholders: Stakeholder[] = [
-      {
-        id: "1",
-        name: "Jennifer Martinez",
-        organization: "Dominion Energy",
-        position: "VP Grid Technology",
-        email: "jennifer.martinez@dominionenergy.com",
-        phone: "804-555-0123",
-        careerInfluence: 10,
-        relationshipSupport: 8,
-        engagementDifficulty: 3,
-        relationship: "ally",
-        category: "internal",
-        stakeholderType: "power_broker",
-        engagementFrequency: "weekly",
-        lastContact: "2024-06-18",
-        coreInterests: [
-          "Grid modernization",
-          "DERMS implementation",
-          "Technology innovation",
-          "Regulatory compliance",
-        ],
-        potentialOutcomes: [
-          "Budget approval",
-          "Team expansion",
-          "Strategic project leadership",
-          "Promotion opportunities",
-        ],
-        notes:
-          "Direct sponsor and key advocate. Strong supporter of DERMS and cloud-based solutions. Critical for career advancement.",
-        location: "Richmond, VA",
-        connections: ["2", "5"],
-      },
-      {
-        id: "2",
-        name: "Dr. Michael Chen",
-        organization: "U.S. Department of Energy",
-        position: "Director, Grid Modernization Office",
-        email: "michael.chen@doe.gov",
-        phone: "202-555-0456",
-        careerInfluence: 9,
-        relationshipSupport: 9,
-        engagementDifficulty: 7,
-        relationship: "ally",
-        category: "government",
-        stakeholderType: "decision_maker",
-        engagementFrequency: "quarterly",
-        lastContact: "2024-05-15",
-        coreInterests: [
-          "Grid modernization",
-          "Clean energy integration",
-          "Research funding",
-          "National energy security",
-        ],
-        potentialOutcomes: [
-          "Future DOE funding",
-          "Industry recognition",
-          "Policy influence",
-          "Advisory roles",
-        ],
-        notes:
-          "Awarded $16.8M for GRID-FLEXER project. Key relationship for federal funding and energy policy influence.",
-        location: "Washington, DC",
-        connections: ["1", "3", "4"],
-      },
-      {
-        id: "3",
-        name: "Sarah Kim",
-        organization: "NVIDIA Corporation",
-        position: "Director, Energy Sector Solutions",
-        email: "sarah.kim@nvidia.com",
-        phone: "408-555-0789",
-        careerInfluence: 8,
-        relationshipSupport: 7,
-        engagementDifficulty: 5,
-        relationship: "ally",
-        category: "external",
-        stakeholderType: "connector",
-        engagementFrequency: "monthly",
-        lastContact: "2024-06-01",
-        coreInterests: [
-          "AI in energy",
-          "Grid computing",
-          "Technology partnerships",
-          "Market expansion",
-        ],
-        potentialOutcomes: [
-          "Technology partnerships",
-          "Industry opportunities",
-          "Thought leadership",
-          "Executive roles",
-        ],
-        notes:
-          "Connected through NREL Utilidata partnership. Strong industry advocate who offered competitive package.",
-        location: "Santa Clara, CA",
-        connections: ["2", "4", "6"],
-      },
-      {
-        id: "4",
-        name: "Josh Walker",
-        organization: "Utilidata Inc.",
-        position: "CEO & Co-Founder",
-        email: "josh.walker@utilidata.com",
-        phone: "401-555-0321",
-        careerInfluence: 7,
-        relationshipSupport: 9,
-        engagementDifficulty: 4,
-        relationship: "ally",
-        category: "external",
-        stakeholderType: "influencer",
-        engagementFrequency: "monthly",
-        lastContact: "2024-05-28",
-        coreInterests: [
-          "Smart grid technology",
-          "DER integration",
-          "Utility partnerships",
-          "Innovation scaling",
-        ],
-        potentialOutcomes: [
-          "Advisory positions",
-          "Technology insights",
-          "Startup connections",
-          "Industry credibility",
-        ],
-        notes:
-          "Facilitated NVIDIA partnership at NREL. Values expertise in utility needs and technology validation.",
-        location: "Providence, RI",
-        connections: ["2", "3", "7"],
-      },
-      {
-        id: "5",
-        name: "Robert Thompson",
-        organization: "Dominion Energy",
-        position: "VP Grid Operations",
-        email: "robert.thompson@dominionenergy.com",
-        phone: "804-555-0654",
-        careerInfluence: 9,
-        relationshipSupport: 6,
-        engagementDifficulty: 7,
-        relationship: "neutral",
-        category: "internal",
-        stakeholderType: "decision_maker",
-        engagementFrequency: "monthly",
-        lastContact: "2024-06-10",
-        coreInterests: [
-          "Grid reliability",
-          "Operational efficiency",
-          "Technology integration",
-          "Risk management",
-        ],
-        potentialOutcomes: [
-          "Operational support",
-          "Cross-functional collaboration",
-          "Technology adoption",
-          "Executive visibility",
-        ],
-        notes:
-          "Key stakeholder for DERMS operations. Initially skeptical of cloud solutions but warming to benefits.",
-        location: "Richmond, VA",
-        connections: ["1", "8"],
-      },
-      {
-        id: "6",
-        name: "Dr. Amanda Foster",
-        organization: "National Renewable Energy Laboratory",
-        position: "Group Manager, Grid Integration",
-        email: "amanda.foster@nrel.gov",
-        phone: "303-555-0987",
-        careerInfluence: 6,
-        relationshipSupport: 9,
-        engagementDifficulty: 3,
-        relationship: "ally",
-        category: "external",
-        stakeholderType: "champion",
-        engagementFrequency: "quarterly",
-        lastContact: "2024-04-20",
-        coreInterests: [
-          "Grid research",
-          "Technology validation",
-          "Industry collaboration",
-          "Knowledge transfer",
-        ],
-        potentialOutcomes: [
-          "Research partnerships",
-          "Academic credibility",
-          "Industry publications",
-          "Conference speaking",
-        ],
-        notes:
-          "Former colleague who provides ongoing research insights and industry connections.",
-        location: "Golden, CO",
-        connections: ["2", "3", "4"],
-      },
-      {
-        id: "7",
-        name: "Maria Rodriguez",
-        organization: "Virginia State Corporation Commission",
-        position: "Director, Energy Regulation",
-        email: "maria.rodriguez@scc.virginia.gov",
-        phone: "804-555-0246",
-        careerInfluence: 8,
-        relationshipSupport: 5,
-        engagementDifficulty: 8,
-        relationship: "neutral",
-        category: "government",
-        stakeholderType: "gatekeeper",
-        engagementFrequency: "as_needed",
-        lastContact: "2024-03-15",
-        coreInterests: [
-          "Regulatory compliance",
-          "Consumer protection",
-          "Grid modernization",
-          "Rate justification",
-        ],
-        potentialOutcomes: [
-          "Regulatory approval",
-          "Policy influence",
-          "Industry reputation",
-          "Compliance guidance",
-        ],
-        notes:
-          "Critical for DERMS regulatory approval. Relationship needs strengthening for future initiatives.",
-        location: "Richmond, VA",
-        connections: ["1", "5"],
-      },
-      {
-        id: "8",
-        name: "David Park",
-        organization: "Dominion Energy",
-        position: "General Manager, Customer Programs",
-        email: "david.park@dominionenergy.com",
-        phone: "804-555-0135",
-        careerInfluence: 7,
-        relationshipSupport: 8,
-        engagementDifficulty: 4,
-        relationship: "ally",
-        category: "internal",
-        stakeholderType: "decision_maker",
-        engagementFrequency: "monthly",
-        lastContact: "2024-06-12",
-        coreInterests: [
-          "Customer engagement",
-          "DER adoption",
-          "Program effectiveness",
-          "Technology integration",
-        ],
-        potentialOutcomes: [
-          "Program collaboration",
-          "Customer insights",
-          "Technology deployment",
-          "Executive support",
-        ],
-        notes:
-          "Strong collaborator on customer-facing DER programs. Appreciates technology expertise and practical solutions.",
-        location: "Richmond, VA",
-        connections: ["1", "5"],
-      },
-    ];
-    setStakeholders(sampleStakeholders);
-  }, []);
+    if (!user) return;
+
+    const unsubscribe = subscribeToStakeholders(user.uid, (stakeholders) => {
+      setStakeholders(stakeholders);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const filteredStakeholders = useMemo(() => {
     return stakeholders.filter((stakeholder) => {
@@ -618,32 +379,59 @@ const CareerStakeholderMatrix: React.FC = () => {
     setStakeholderToDelete(stakeholder);
   };
 
-  const confirmDelete = () => {
-    if (stakeholderToDelete) {
-      setStakeholders((prev) =>
-        prev.filter((s) => s.id !== stakeholderToDelete.id)
-      );
+  // Delete function using Firebase
+  const confirmDelete = async () => {
+    if (!stakeholderToDelete) return;
+    
+    setIsSaving(true);
+    try {
+      await deleteStakeholder(stakeholderToDelete.id);
       setStakeholderToDelete(null);
       setSelectedStakeholder(null);
+    } catch (error) {
+      console.error('Error deleting stakeholder:', error);
+      alert('Error deleting stakeholder. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleEditStakeholder = (stakeholder: Stakeholder) => {
-    setSelectedStakeholder(stakeholder);
-    setIsEditingStakeholder(true);
+    // Ensure we're using the actual Firebase document ID
+    const actualStakeholder = stakeholders.find(s => s.id === stakeholder.id);
+    if (actualStakeholder) {
+      setSelectedStakeholder(actualStakeholder);
+      setIsEditingStakeholder(true);
+    } else {
+      console.error('Stakeholder not found in current state:', stakeholder.id);
+      alert('Error: Stakeholder data not synchronized. Please refresh and try again.');
+    }
   };
 
-  const handleSaveStakeholder = (stakeholder: Stakeholder) => {
-    if (isEditingStakeholder) {
-      setStakeholders((prev) =>
-        prev.map((s) => (s.id === stakeholder.id ? stakeholder : s))
-      );
-    } else {
-      setStakeholders((prev) => [...prev, stakeholder]);
+  // Save function using Firebase with proper ID handling
+  const handleSaveStakeholder = async (stakeholder: Stakeholder) => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      if (isEditingStakeholder && selectedStakeholder) {
+        // Use the actual Firebase document ID from the selected stakeholder
+        await updateStakeholder(selectedStakeholder.id, stakeholder);
+      } else {
+        // For new stakeholders, remove any temporary ID
+        const { id, ...stakeholderWithoutId } = stakeholder;
+        await createStakeholder(user.uid, stakeholderWithoutId);
+      }
+      
+      setIsAddingStakeholder(false);
+      setIsEditingStakeholder(false);
+      setSelectedStakeholder(null);
+    } catch (error) {
+      console.error('Error saving stakeholder:', error);
+      alert('Error saving stakeholder. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    setIsAddingStakeholder(false);
-    setIsEditingStakeholder(false);
-    setSelectedStakeholder(null);
   };
 
   const handleCancelForm = () => {
@@ -1145,7 +933,9 @@ const CareerStakeholderMatrix: React.FC = () => {
     const handleSubmit = () => {
       const newStakeholder: Stakeholder = {
         ...formData,
-        id: stakeholder?.id || Date.now().toString(),
+        // For new stakeholders, don't include an ID - let Firebase generate it
+        // For existing stakeholders, preserve the original ID
+        id: stakeholder?.id || '',
         name: formData.name || "",
         organization: formData.organization || "",
         position: formData.position || "",
@@ -1498,9 +1288,11 @@ const CareerStakeholderMatrix: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                disabled={isSaving}
+                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                {stakeholder ? "Update" : "Add"} Stakeholder
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>{isSaving ? 'Saving...' : stakeholder ? 'Update' : 'Add'} Stakeholder</span>
               </button>
             </div>
           </div>
@@ -1855,6 +1647,14 @@ const CareerStakeholderMatrix: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {loading ? (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading your stakeholder data...</p>
+          </div>
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -1865,6 +1665,11 @@ const CareerStakeholderMatrix: React.FC = () => {
             Map and analyze your professional relationships to accelerate career
             growth
           </p>
+          {/* Connection Status Indicator */}
+          <div className="flex items-center space-x-2 text-sm text-gray-600 mt-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Connected to Firebase</span>
+          </div>
         </div>
 
         {/* Controls */}
@@ -2335,15 +2140,18 @@ const CareerStakeholderMatrix: React.FC = () => {
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
-                  Delete Stakeholder
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSaving ? 'Deleting...' : 'Delete Stakeholder'}</span>
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
+    )}
     </div>
   );
 };
