@@ -8,6 +8,12 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
+  // EXPLICITLY DISABLE ALL EXPERIMENTAL FEATURES
+  experimental: {
+    optimizeCss: false,
+    turbo: undefined,
+  },
+  
   // Environment variables for production
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
