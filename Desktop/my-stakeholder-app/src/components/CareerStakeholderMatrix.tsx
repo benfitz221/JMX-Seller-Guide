@@ -37,12 +37,14 @@ import {
   Bar,
 } from "recharts";
 import { useAuth } from "../lib/useAuth";
-import { 
-  createStakeholder, 
-  updateStakeholder, 
-  deleteStakeholder, 
-  subscribeToStakeholders 
+import {
+  createStakeholder,
+  updateStakeholder,
+  deleteStakeholder,
+  subscribeToStakeholders
 } from "../lib/stakeholders";
+import { AuthModal } from "./AuthModal";
+import { AuthService } from "../lib/authService";
 
 interface Stakeholder {
   id: string;
@@ -120,7 +122,18 @@ const metricDefinitions = {
 } as const;
 
 const CareerStakeholderMatrix: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { 
+    user, 
+    loading, 
+    isAnonymous, 
+    hasEmailAuth,
+    signInWithEmail,
+    createAccount,
+    signOut,
+    authLoading,
+    authError,
+    clearAuthError
+  } = useAuth();
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
   const [selectedStakeholder, setSelectedStakeholder] =
     useState<Stakeholder | null>(null);
@@ -139,6 +152,12 @@ const CareerStakeholderMatrix: React.FC = () => {
     "influence-support" | "influence-difficulty"
   >("influence-support");
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Authentication state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showAccountPrompt, setShowAccountPrompt] = useState(false);
 
   // Stakeholder type definitions for career planning
   const stakeholderTypeDefinitions = {
@@ -378,6 +397,54 @@ const CareerStakeholderMatrix: React.FC = () => {
   const handleDeleteStakeholder = (stakeholder: Stakeholder) => {
     setStakeholderToDelete(stakeholder);
   };
+
+  // Authentication handlers
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      await signInWithEmail(email, password);
+      setShowAuthModal(false);
+      setSuccessMessage('Welcome back! Your data is now accessible from any device.');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 5000);
+    } catch (error) {
+      // Error is handled by the auth hook
+    }
+  };
+
+  const handleCreateAccount = async (email: string, password: string, name: string) => {
+    try {
+      const result = await createAccount(email, password, name);
+      setShowAuthModal(false);
+      
+      if (result.dataMigrated) {
+        setSuccessMessage('Welcome back! Your session data has been saved to your existing account.');
+      } else {
+        setSuccessMessage('Account created! Your data is now saved permanently across all devices.');
+      }
+      
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 7000);
+    } catch (error) {
+      // Error is handled by the auth hook
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setSuccessMessage('Signed out successfully. You\'re now browsing as a guest.');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  // Get account creation suggestion based on current usage
+  const accountSuggestion = useMemo(() => {
+    if (!isAnonymous) return { show: false };
+    return AuthService.getAccountCreationSuggestion(stakeholders.length);
+  }, [isAnonymous, stakeholders.length]);
 
   // Delete function using Firebase
   const confirmDelete = async () => {
@@ -1656,20 +1723,106 @@ const CareerStakeholderMatrix: React.FC = () => {
         </div>
       ) : (
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Career Stakeholder Matrix
-          </h1>
-          <p className="text-gray-600">
-            Map and analyze your professional relationships to accelerate career
-            growth
-          </p>
-          {/* Connection Status Indicator */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600 mt-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Connected to Firebase</span>
+        {/* User Header */}
+        <div className="flex items-center justify-between mb-4 bg-white rounded-lg border p-4">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">Career Stakeholder Matrix</h1>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Connected to Firebase</span>
+            </div>
           </div>
+          
+          <div className="flex items-center space-x-3">
+            {isAnonymous ? (
+              <>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Guest Mode</span> • Data saved locally
+                </div>
+                <button 
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Save My Data Permanently</span>
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <div className="text-sm text-gray-700">
+                  <div className="font-medium">
+                    Welcome, {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                  </div>
+                  <div className="text-gray-500">
+                    Data saved across all devices
+                  </div>
+                </div>
+                <button 
+                  onClick={handleSignOut}
+                  className="text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <p className="text-green-800 font-medium">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setShowSuccessMessage(false)}
+              className="text-green-600 hover:text-green-800"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Account Creation Prompt */}
+        {isAnonymous && accountSuggestion.show && (
+          <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-blue-800 mb-1">
+                  {accountSuggestion.title}
+                </h3>
+                <p className="text-blue-700">
+                  {accountSuggestion.message}
+                </p>
+              </div>
+              <div className="flex items-center space-x-3 ml-4">
+                <button
+                  onClick={() => setShowAccountPrompt(false)}
+                  className="text-blue-600 hover:text-blue-800 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+                >
+                  Later
+                </button>
+                <button 
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Application Description */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Map and analyze your professional relationships to accelerate career growth
+          </p>
         </div>
 
         {/* Controls */}
@@ -2150,6 +2303,22 @@ const CareerStakeholderMatrix: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Authentication Modal */}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => {
+            setShowAuthModal(false);
+            clearAuthError();
+          }}
+          onSignIn={handleSignIn}
+          onCreateAccount={handleCreateAccount}
+          onContinueAsGuest={() => setShowAuthModal(false)}
+          isLoading={authLoading}
+          error={authError}
+          isAnonymousUser={isAnonymous}
+          stakeholderCount={stakeholders.length}
+        />
       </div>
     )}
     </div>
