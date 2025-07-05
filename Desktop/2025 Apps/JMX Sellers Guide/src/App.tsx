@@ -89,6 +89,7 @@ const StamfordSellersGuide = () => {
     }
 
     setIsSubmitting(true);
+    console.log('=== STARTING FIREBASE SAVE PROCESS ===');
 
     try {
       // Save lead data to Firebase
@@ -99,12 +100,15 @@ const StamfordSellersGuide = () => {
         phone: formData.phone || undefined
       };
 
+      console.log('About to call saveLeadData with:', leadData);
       const docId = await saveLeadData(leadData);
+      console.log('=== FIREBASE SAVE SUCCESSFUL ===');
       console.log('Lead successfully saved with ID:', docId);
       
       // Show success message and proceed to main app
       setShowForm(false);
     } catch (error) {
+      console.error('=== FIREBASE SAVE FAILED ===');
       console.error('Error saving lead data:', error);
       alert('There was an error saving your information. Please try again.');
     } finally {
