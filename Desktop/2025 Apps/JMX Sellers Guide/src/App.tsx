@@ -55,21 +55,6 @@ const StamfordSellersGuide = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // DEBUG: Log form state
-  console.log('=== FORM STATE DEBUG ===', { showForm, isSubmitting });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimatedStats({
-        appreciation: 14.9,
-        aboveAsking: 69,
-        multipleOffers: 68,
-        daysOnMarket: 30,
-      });
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -81,8 +66,12 @@ const StamfordSellersGuide = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('*** FORM SUBMITTED ***');
+    console.log('Form data:', formData);
+    
     // Validate required fields
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.agreeToMarketing) {
+      console.log('*** VALIDATION FAILED ***');
       alert('Please fill in all required fields and agree to the marketing communications.');
       return;
     }
@@ -90,10 +79,12 @@ const StamfordSellersGuide = () => {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
+      console.log('*** EMAIL VALIDATION FAILED ***');
       alert('Please enter a valid email address.');
       return;
     }
 
+    console.log('*** STARTING FIREBASE SAVE ***');
     setIsSubmitting(true);
 
     try {
@@ -105,20 +96,19 @@ const StamfordSellersGuide = () => {
         phone: formData.phone || undefined
       };
 
+      console.log('*** CALLING FIREBASE FUNCTION ***');
       const docId = await saveLeadData(leadData);
-      console.log('Lead successfully saved with ID:', docId);
+      console.log('*** FIREBASE SAVE SUCCESSFUL ***', docId);
       
       // Show success message and proceed to main app
       setShowForm(false);
     } catch (error) {
+      console.error('*** FIREBASE SAVE FAILED ***');
       console.error('Error saving lead data:', error);
       alert('There was an error saving your information. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const neighborhoodData = [
     {
       name: "North Stamford",
       median: 1057500,
