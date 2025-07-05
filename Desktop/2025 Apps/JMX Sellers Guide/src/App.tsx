@@ -35,8 +35,11 @@ import {
 import { saveLeadData } from "./firebase";
 
 const StamfordSellersGuide = () => {
+  // DEBUG: Log component render
+  console.log('=== STAMFORD SELLERS GUIDE COMPONENT LOADED ===');
+  
   const [activeTab, setActiveTab] = useState("overview");
-  const [showForm, setShowForm] = useState(true);
+  const [showForm, setShowForm] = useState(true); // FORCE FORM TO SHOW
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -51,6 +54,9 @@ const StamfordSellersGuide = () => {
     daysOnMarket: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // DEBUG: Log form state
+  console.log('=== FORM STATE DEBUG ===', { showForm, isSubmitting });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -89,7 +95,6 @@ const StamfordSellersGuide = () => {
     }
 
     setIsSubmitting(true);
-    console.log('=== STARTING FIREBASE SAVE PROCESS ===');
 
     try {
       // Save lead data to Firebase
@@ -100,15 +105,12 @@ const StamfordSellersGuide = () => {
         phone: formData.phone || undefined
       };
 
-      console.log('About to call saveLeadData with:', leadData);
       const docId = await saveLeadData(leadData);
-      console.log('=== FIREBASE SAVE SUCCESSFUL ===');
       console.log('Lead successfully saved with ID:', docId);
       
       // Show success message and proceed to main app
       setShowForm(false);
     } catch (error) {
-      console.error('=== FIREBASE SAVE FAILED ===');
       console.error('Error saving lead data:', error);
       alert('There was an error saving your information. Please try again.');
     } finally {
