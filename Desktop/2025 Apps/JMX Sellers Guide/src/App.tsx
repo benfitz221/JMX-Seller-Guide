@@ -109,7 +109,10 @@ const StamfordSellersGuide = () => {
     } finally {
       setIsSubmitting(false);
     }
-    {
+  };
+
+  const neighborhoodData = [
+      {
       name: "North Stamford",
       median: 1057500,
       appreciation: 25.9,
