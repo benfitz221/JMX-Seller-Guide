@@ -55,6 +55,21 @@ const StamfordSellersGuide = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // DEBUG: Log form state
+  console.log('=== FORM STATE DEBUG ===', { showForm, isSubmitting });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatedStats({
+        appreciation: 14.9,
+        aboveAsking: 69,
+        multipleOffers: 68,
+        daysOnMarket: 30,
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -112,7 +127,7 @@ const StamfordSellersGuide = () => {
   };
 
   const neighborhoodData = [
-      {
+    {
       name: "North Stamford",
       median: 1057500,
       appreciation: 25.9,
