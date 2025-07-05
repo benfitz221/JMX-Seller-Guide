@@ -28,6 +28,8 @@ export interface LeadData {
 // Function to save lead data to Firebase
 export const saveLeadData = async (leadData: LeadData) => {
   try {
+    console.log('Attempting to save lead data:', leadData);
+    
     const docRef = await addDoc(collection(db, 'leads'), {
       id: Date.now(), // Simple ID generation
       firstName: leadData.firstName,
@@ -42,6 +44,7 @@ export const saveLeadData = async (leadData: LeadData) => {
     return docRef.id;
   } catch (error) {
     console.error('Error saving lead data:', error);
+    console.error('Error details:', error.message);
     throw error;
   }
 };
